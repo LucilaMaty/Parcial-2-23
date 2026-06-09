@@ -1,0 +1,12 @@
+# Dependencias instaladas localmente
+node_modules/
+# Variables de entorno
+#.env -> Comentado por motivos didácticos, en una implementación real no se
+comparte
+# Logs
+*.log
+# Archivos propios del sistema operativo
+.DS_Store
+Thumbs.db
+# Cobertura de tests para futuras etapas
+coverage/
