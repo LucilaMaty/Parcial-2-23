@@ -36,7 +36,7 @@ const Pedido = sequelize.define('Pedido', {
     defaultValue: 'pendiente',
   },
   observaciones: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING, 
     allowNull: true,
   },
 });
