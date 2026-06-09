@@ -1,5 +1,5 @@
 // src/services/auth.service.js
-import Usuario from '../models/usuario.js';
+import Usuario from '../src/models/usuario.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 

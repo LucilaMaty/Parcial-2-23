@@ -1,5 +1,5 @@
 // src/controllers/auth.controller.js
-import authService from '../services/auth.service.js';
+import authService from '../../services/auth.services.js';
 
 export const registrar = async (req, res, next) => {
   try {

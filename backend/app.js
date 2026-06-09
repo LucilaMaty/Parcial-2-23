@@ -2,8 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.routes.js';
-import { sequelize } from './models/index.js'; // Importamos la sincronización de la DB
+import authRoutes from './src/routes/auth.routes.js';
+import { sequelize } from './src/models/index.js'; // Importamos la sincronización de la DB
 
 dotenv.config();
 
