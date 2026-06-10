@@ -2,6 +2,9 @@
 import { Pedido, Menu, HistorialPedido, sequelize } from '../src/models/index.js';
 import { Op } from 'sequelize';
 
+// 1. Importamos la utilidad de los filtros
+import { construirFiltros } from '../src/utils/filtroPedidos.util.js';
+
 class PedidosService {
   async crearPedido(usuarioId, datosPedido) {
     const { menuId, fecha, cantidad, turnoEntrega, puntoRetiro, observaciones } = datosPedido;
@@ -74,12 +77,33 @@ class PedidosService {
     }
   }
 
-  // Servicio para obtener los pedidos de un usuario (para el listado frontend)
-  async obtenerPedidosUsuario(usuarioId) {
+// PUNTO 3: Listar pedidos con filtros combinables (ahora usa la utilidad)
+  async obtenerPedidosUsuario(usuarioId, filtros = {}) {
+       // Usamos la función separada para mantener este archivo limpio
+       const { wherePedido, whereMenu } = construirFiltros(usuarioId, filtros);
+
        return await Pedido.findAll({
-           where: { usuarioId },
-           include: [{ model: Menu, as: 'menu' }] // Incluimos los datos del menú relacionado
+           where: wherePedido,
+           include: [{ 
+             model: Menu, 
+             as: 'menu',
+             where: Object.keys(whereMenu).length > 0 ? whereMenu : undefined
+           }] 
        });
+  }
+
+  // PUNTO 4: Ver el detalle dinámico de un pedido específico
+  async obtenerDetalle(pedidoId, usuarioId) {
+    const pedido = await Pedido.findOne({
+      where: { id: pedidoId, usuarioId }, // Validamos que el ID coincida y que sea de este usuario
+      include: [{ model: Menu, as: 'menu' }]
+    });
+
+    if (!pedido) {
+      throw new Error('Pedido no encontrado o no te pertenece.');
+    }
+    
+    return pedido;
   }
 }
 
