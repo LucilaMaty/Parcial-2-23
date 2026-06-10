@@ -105,6 +105,110 @@ class PedidosService {
     
     return pedido;
   }
+  // PUNTO 6: Editar un pedido
+  async editarPedido(pedidoId, usuarioId, datosNuevos) {
+    const { cantidad, turnoEntrega, puntoRetiro, observaciones } = datosNuevos;
+    
+    // Abrimos transacción por si algo falla al editar y guardar historial
+    const transaccion = await sequelize.transaction();
+
+    try {
+      // 1. Buscamos el pedido y traemos la info del menú asociado
+      const pedido = await Pedido.findOne({
+        where: { id: pedidoId, usuarioId },
+        include: [{ model: Menu, as: 'menu' }],
+        transaction: transaccion
+      });
+
+      if (!pedido) throw new Error('Pedido no encontrado o no tienes permiso.');
+      
+      // 2. Validamos que no esté entregado ni cancelado
+      if (pedido.estado === 'entregado' || pedido.estado === 'cancelado') {
+        throw new Error('No se puede editar un pedido que ya fue entregado o cancelado.');
+      }
+
+      // Guardamos cómo estaba el pedido antes para el historial
+      const valorAnterior = {
+        cantidad: pedido.cantidad,
+        turnoEntrega: pedido.turnoEntrega,
+        puntoRetiro: pedido.puntoRetiro,
+        observaciones: pedido.observaciones
+      };
+
+      // 3. Si cambió la cantidad, hay que recalcular el cupo y el total
+      if (cantidad && cantidad !== pedido.cantidad) {
+        if (cantidad <= 0) throw new Error('La cantidad debe ser mayor a cero.');
+        
+        const diferencia = cantidad - pedido.cantidad;
+        
+        // Si pide más de lo que ya tenía, verificamos si hay cupo
+        if (diferencia > 0) {
+          const pedidosExistentes = await Pedido.sum('cantidad', {
+            where: { menuId: pedido.menu.id, fecha: pedido.menu.fecha, estado: { [Op.in]: ['pendiente', 'confirmado'] } },
+            transaction: transaccion
+          }) || 0;
+          
+          const cupoRestante = pedido.menu.cupoDiario - pedidosExistentes;
+          if (diferencia > cupoRestante) {
+            throw new Error(`Cupo insuficiente. Solo quedan ${cupoRestante} viandas más disponibles.`);
+          }
+        }
+        
+        pedido.cantidad = cantidad;
+        pedido.total = cantidad * pedido.menu.precio; // Recalculamos total
+      }
+
+      // 4. Actualizamos el resto de los campos si los enviaron
+      if (turnoEntrega) pedido.turnoEntrega = turnoEntrega;
+      if (puntoRetiro) pedido.puntoRetiro = puntoRetiro;
+      if (observaciones !== undefined) pedido.observaciones = observaciones;
+
+      await pedido.save({ transaction: transaccion });
+
+      // 5. Guardamos en el historial
+      await HistorialPedido.create({
+        pedidoId: pedido.id,
+        usuarioId,
+        accion: 'edicion',
+        valorAnterior: JSON.stringify(valorAnterior),
+        valorNuevo: JSON.stringify({ cantidad: pedido.cantidad, turnoEntrega: pedido.turnoEntrega, puntoRetiro: pedido.puntoRetiro })
+      }, { transaction: transaccion });
+
+      await transaccion.commit();
+      return pedido;
+
+    } catch (error) {
+      await transaccion.rollback();
+      throw error;
+    }
+  }
+
+  // PUNTO 7: Cancelar un pedido
+  async cancelarPedido(pedidoId, usuarioId) {
+    const pedido = await Pedido.findOne({ where: { id: pedidoId, usuarioId } });
+    
+    if (!pedido) throw new Error('Pedido no encontrado o no te pertenece.');
+    if (pedido.estado === 'entregado' || pedido.estado === 'cancelado') {
+      throw new Error('El pedido ya está entregado o cancelado.');
+    }
+
+    const valorAnterior = { estado: pedido.estado };
+    
+    // Cambiamos el estado a cancelado
+    pedido.estado = 'cancelado';
+    await pedido.save();
+
+    // Guardamos en el historial
+    await HistorialPedido.create({
+      pedidoId: pedido.id,
+      usuarioId,
+      accion: 'cancelacion',
+      valorAnterior: JSON.stringify(valorAnterior),
+      valorNuevo: JSON.stringify({ estado: 'cancelado' })
+    });
+
+    return pedido;
+  }
 }
 
 export default new PedidosService();
