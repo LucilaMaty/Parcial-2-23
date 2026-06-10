@@ -1,54 +1,27 @@
-import { Pedido, Menu } from '../models/index.js'; // Ajustá la ruta según tu estructura
-import { Op } from 'sequelize';
+// src/controllers/pedidos.controller.js
+import pedidosService from '../../services/pedidos.services.js';
 
-export const listarPedidos = async (req, res, next) => {
+export const crearPedido = async (req, res) => {
   try {
-    // 1. Extraemos los posibles filtros de la URL (Query Params)
-    const { fecha, estado, menuId, tipoMenu } = req.query;
+    // Obtenemos el ID del usuario autenticado (inyectado por el middleware verificarToken)
+    const usuarioId = req.usuario.id; 
+    const datosPedido = req.body;
 
-    // 2. Inicializamos los objetos donde guardaremos las condiciones
-    const wherePedido = {};
-    const whereMenu = {};
-
-    // 3. Agregamos las condiciones dinámicamente si el parámetro existe
-    if (fecha) {
-      wherePedido.fecha = fecha; 
-      // Nota: Si la fecha incluye horas, podrías necesitar usar Op.gte y Op.lte para abarcar todo el día.
-    }
-
-    if (estado) {
-      wherePedido.estado = estado;
-    }
-
-    if (menuId) {
-      wherePedido.menuId = menuId;
-    }
-
-    if (tipoMenu) {
-      // Este filtro pertenece a la tabla Menu
-      whereMenu.tipo = tipoMenu;
-    }
-
-    // 4. Ejecutamos la consulta en Sequelize
-    const pedidos = await Pedido.findAll({
-      where: wherePedido,
-      include: [
-        {
-          model: Menu,
-          as: 'menu', // Asegurate de usar el mismo alias que definiste en tus asociaciones
-          where: Object.keys(whereMenu).length > 0 ? whereMenu : undefined,
-          // Si hay filtros de menú, required: true hace un INNER JOIN. 
-          // Si no, se comporta como un LEFT JOIN trayendo todos los pedidos.
-          required: Object.keys(whereMenu).length > 0 
-        }
-      ]
-    });
-
-    // 5. Devolvemos el resultado
-    res.status(200).json(pedidos);
-
+    const nuevoPedido = await pedidosService.crearPedido(usuarioId, datosPedido);
+    
+    return res.status(201).json(nuevoPedido);
   } catch (error) {
-    // El error viaja al middleware de manejo centralizado de errores (exigencia del enunciado)
-    next(error); 
+     // Respondemos con un 400 (Bad Request) si falla alguna validación de negocio
+    return res.status(400).json({ error: error.message });
   }
 };
+
+export const listarPedidos = async (req, res) => {
+    try {
+        const usuarioId = req.usuario.id;
+        const pedidos = await pedidosService.obtenerPedidosUsuario(usuarioId);
+        return res.status(200).json(pedidos);
+    } catch(error){
+        return res.status(500).json({ error: error.message });
+    }
+}

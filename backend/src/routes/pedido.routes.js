@@ -1,11 +1,17 @@
-import { Router } from 'express';
-import { listarPedidos } from '../controllers/pedido.controller.js';
-// import { verificarToken, verificarRol } from '../middlewares/auth.middleware.js'; // (Descomentar cuando integres JWT)
+// src/routes/pedidos.routes.js
+import express from 'express';
+import { crearPedido, listarPedidos } from '../controllers/pedido.controller.js';
+import { verificarToken } from '../middlewares/auth.middlewares.js';
 
-const router = Router();
+const router = express.Router();
 
-// Endpoint: GET /api/pedidos
-// Como el enunciado exige protección JWT, eventualmente deberás agregar los middlewares aquí
-router.get('/', listarPedidos); 
+// Aplicamos el middleware verificarToken a todas las rutas de este archivo
+router.use(verificarToken);
+
+// POST /api/pedidos -> Crear un pedido
+router.post('/', crearPedido);
+
+// GET /api/pedidos -> Listar los pedidos del usuario autenticado
+router.get('/', listarPedidos);
 
 export default router;

@@ -1,7 +1,7 @@
 // src/routes/menus.routes.js
 import express from 'express';
-// Importamos los middlewares [cite: 3636, 3637]
-import { verificarToken, esAdmin } from '../middlewares/auth.middleware.js';
+// Importamos los middlewares
+import { verificarToken, esAdmin } from '../middlewares/auth.middlewares.js';
 // Suponiendo que ya tenés tus controladores listos
 import { obtenerMenus, crearMenu } from '../controllers/menus.controller.js';
 
