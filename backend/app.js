@@ -10,6 +10,9 @@ import { sequelize } from './src/models/index.js'; // Importamos la sincronizaci
 // Importamos las rutas de pedidos
 import pedidosRoutes from './src/routes/pedido.routes.js';
 
+// Importamos las rutas de administración (cambio de estado de pedidos)
+import adminRoutes from './src/routes/admin.routes.js';
+
 dotenv.config();
 
 const app = express();
@@ -23,6 +26,9 @@ app.use('/api/auth', authRoutes);
 
 // Montamos las rutas de pedidos
 app.use('/api/pedidos', pedidosRoutes);
+
+// Montamos las rutas de administración
+app.use('/api/admin', adminRoutes);
 
 // Middleware de manejo centralizado de errores
 app.use((err, req, res, next) => {
