@@ -19,7 +19,8 @@ export const crearPedido = async (req, res) => {
 export const listarPedidos = async (req, res) => {
     try {
         const usuarioId = req.usuario.id;
-        const pedidos = await pedidosService.obtenerPedidosUsuario(usuarioId);
+        const filtros = req.query; // Capturamos los filtros de la URL (ej: ?estado=pendiente)
+        const pedidos = await pedidosService.obtenerPedidosUsuario(usuarioId, filtros);
         return res.status(200).json(pedidos);
     } catch(error){
         return res.status(500).json({ error: error.message });
