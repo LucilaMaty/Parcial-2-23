@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -6,6 +6,7 @@ import MisPedidos from './pages/MisPedidos';
 import AdminPanel from './pages/AdminPanel'; // 1. IMPORTAMOS LA PANTALLA REAL DEL ADMIN
 import FormularioPedido from './pages/FormularioPedido';
 import DetallePedido from './pages/DetallePedido';
+import NotFound from './pages/NotFound';
 
 // Último componente temporal que nos queda (el inicio)
 const VistaInicio = () => <h2>🏠 Pantalla de Bienvenida (Pública)</h2>;
@@ -93,7 +94,7 @@ function App() {
             } 
           />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
 
       </div>
