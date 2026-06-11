@@ -39,14 +39,17 @@ const cargarDatosSemilla = async () => {
     const estados = ['pendiente', 'confirmado', 'entregado', 'cancelado'];
     
     for (let i = 0; i < 12; i++) {
+      const menuSeleccionado = menus[i % 6];
+      const cantidad = Math.floor(Math.random() * 3) + 1;
+
       pedidosData.push({
         usuarioId: usuarios[(i % 2) + 1].id, // Alterna entre los usuarios comunes
-        menuId: menus[i % 6].id,             // Alterna entre los menús
+        menuId: menuSeleccionado.id,         // Alterna entre los menús
         fecha: hoy,
-        cantidad: Math.floor(Math.random() * 3) + 1, // Cantidad entre 1 y 3
+        cantidad: cantidad,                  // Cantidad entre 1 y 3
         turnoEntrega: i % 2 === 0 ? 'almuerzo' : 'cena',
         puntoRetiro: 'Campus Buffet',
-        total: 5000, // En un caso real se recalcula, acá lo forzamos para la semilla
+        total: menuSeleccionado.precio * cantidad, // ✅ CALCULO REAL PARA LA SEMILLA
         estado: estados[i % 4], // Distribuye los estados 
         observaciones: 'Sin sal por favor'
       });

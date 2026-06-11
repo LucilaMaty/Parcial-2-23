@@ -1,66 +1,48 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import PropTypes from 'prop-types'; // Importación necesaria para las validaciones de tipo
+/* eslint-disable */
+import { createContext, useState, useEffect, useContext } from 'react';
 
-// Creación del contexto de autenticación
 export const AuthContext = createContext();
 
-// Proveedor del estado global de autenticación
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [autenticado, setAutenticado] = useState(false);
+  const [cargando, setCargando] = useState(true);
 
+  // Al arrancar la app de cero, revisamos el LocalStorage para mantener la sesión viva
   useEffect(() => {
-    // Al cargar la aplicación, verificamos si ya existe una sesión guardada en el navegador
+    const token = localStorage.getItem('token');
     const usuarioGuardado = localStorage.getItem('usuario');
-    const tokenGuardado = localStorage.getItem('token');
 
-    if (usuarioGuardado && tokenGuardado) {
-      try {
-        setUsuario(JSON.parse(usuarioGuardado));
-      } catch (e) {
-        // Limpieza selectiva si los datos están corruptos
-        localStorage.removeItem('usuario');
-        localStorage.removeItem('token');
-      }
+    if (token && usuarioGuardado) {
+      setUsuario(JSON.parse(usuarioGuardado));
+      setAutenticado(true);
     }
-    setLoading(false);
+    setCargando(false);
   }, []);
 
-  // Función para iniciar sesión y persistir los datos
-  const loginUser = (data) => {
-    if (!data || !data.token || !data.usuario) return;
-    
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('usuario', JSON.stringify(data.usuario));
-    setUsuario(data.usuario);
+  // 👑 LA FUNCIÓN MÁGICA: Guarda el Token y el Usuario de forma global
+  const loginGlobal = (datosUsuario, token) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('usuario', JSON.stringify(datosUsuario));
+    setUsuario(datosUsuario);
+    setAutenticado(true);
   };
 
-  // Función para cerrar sesión limpiando el almacenamiento
-  const logoutUser = () => {
+  // 🚪 LA FUNCIÓN DE SALIDA: Borra el baúl y limpia la memoria
+  const logoutGlobal = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
     setUsuario(null);
+    setAutenticado(false);
   };
 
   return (
-    <AuthContext.Provider value={{ usuario, loginUser, logoutUser, loading }}>
-      {/* Evitamos renderizar los componentes hijos hasta que sepamos si hay un usuario persistido */}
-      {!loading && children}
+    <AuthContext.Provider value={{ usuario, autenticado, cargando, loginGlobal, logoutGlobal }}>
+      {children}
     </AuthContext.Provider>
   );
 };
 
-// Validación profesional de las props (Soluciona la regla estricta de ESLint)
-AuthProvider.propTypes = {
-  children: PropTypes.node.isRequired,
-};
-
-// Hook personalizado para simplificar el uso en componentes
-// Uso: const { usuario, logoutUser } = useAuth();
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };

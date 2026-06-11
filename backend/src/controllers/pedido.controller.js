@@ -18,11 +18,19 @@ export const crearPedido = async (req, res) => {
 
 export const listarPedidos = async (req, res) => {
     try {
-        const usuarioId = req.usuario.id;
-        const filtros = req.query; // Capturamos los filtros de la URL (ej: ?estado=pendiente)
-        const pedidos = await pedidosService.obtenerPedidosUsuario(usuarioId, filtros);
+        const filtros = req.query; 
+        
+        // 1. Nos fijamos si el usuario que hace la petición es administrador
+        const esAdmin = req.usuario.rol === 'admin' || req.usuario.role === 'admin';
+        
+        // 2. LA LLAVE: Si es admin, pasamos 'null' (para que traiga todo). 
+        // Si es alumno común, pasamos su ID real para aislar sus datos.
+        const idParaFiltrar = esAdmin ? null : req.usuario.id;
+
+        // Le mandamos esta variable condicional a nuestro servicio
+        const pedidos = await pedidosService.obtenerPedidosUsuario(idParaFiltrar, filtros);
         return res.status(200).json(pedidos);
-    } catch(error){
+    } catch(error) {
         return res.status(500).json({ error: error.message });
     }
 }
@@ -30,15 +38,44 @@ export const listarPedidos = async (req, res) => {
 export const editarPedido = async (req, res) => {
   try {
     const usuarioId = req.usuario.id; // Lo inyecta el token
+    const rol = req.usuario.rol || req.usuario.role; // 🌟 NUEVO: Sacamos el rol del token
     const pedidoId = req.params.id; // Lo sacamos de la URL
     const datosNuevos = req.body;
 
-    const pedidoEditado = await pedidosService.editarPedido(pedidoId, usuarioId, datosNuevos);
+    // 🌟 Le pasamos el "rol" como un 4to parámetro al servicio
+    const pedidoEditado = await pedidosService.editarPedido(pedidoId, usuarioId, datosNuevos, rol);
+    
     return res.status(200).json(pedidoEditado);
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 };
+
+
+export const obtenerPedidoPorId = async (req, res) => {
+    try {
+        const { id } = req.params; // Saca el numerito de la URL (ej: el 3)
+        const pedido = await pedidosService.obtenerPedidoPorId(id);
+        
+        if (!pedido) {
+            return res.status(404).json({ error: 'El pedido solicitado no existe' });
+        }
+        
+        return res.status(200).json(pedido);
+    } catch(error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+export const listarMenusDisponibles = async (req, res) => {
+  try {
+    const menus = await pedidosService.obtenerMenusActivosHoy();
+    return res.status(200).json(menus);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 
 export const cancelarPedido = async (req, res) => {
   try {

@@ -82,6 +82,10 @@ class PedidosService {
        // Usamos la función separada para mantener este archivo limpio
        const { wherePedido, whereMenu } = construirFiltros(usuarioId, filtros);
 
+       if (usuarioId === null) {
+          delete wherePedido.usuarioId;
+        }  
+
        return await Pedido.findAll({
            where: wherePedido,
            include: [{ 
@@ -90,6 +94,16 @@ class PedidosService {
              where: Object.keys(whereMenu).length > 0 ? whereMenu : undefined
            }] 
        });
+  }
+
+  // 🌟 NUEVA FUNCIÓN: Buscar un pedido individual (Punto 3 del parcial)
+  async obtenerPedidoPorId(id) {
+      return await Pedido.findByPk(id, {
+          include: [{ 
+              model: Menu, 
+              as: 'menu' 
+          }]
+      });
   }
 
   // PUNTO 4: Ver el detalle dinámico de un pedido específico
@@ -105,24 +119,30 @@ class PedidosService {
     
     return pedido;
   }
+  
   // PUNTO 6: Editar un pedido
-  async editarPedido(pedidoId, usuarioId, datosNuevos) {
-    const { cantidad, turnoEntrega, puntoRetiro, observaciones } = datosNuevos;
+  async editarPedido(pedidoId, usuarioId, datosNuevos, rol) { // 🌟 1. Recibe el rol
+    // 🌟 2. Agregamos "estado" para que el Admin pueda cambiarlo
+    const { cantidad, turnoEntrega, puntoRetiro, observaciones, estado } = datosNuevos; 
     
     // Abrimos transacción por si algo falla al editar y guardar historial
     const transaccion = await sequelize.transaction();
 
     try {
-      // 1. Buscamos el pedido y traemos la info del menú asociado
-      const pedido = await Pedido.findOne({
-        where: { id: pedidoId, usuarioId },
+      // 🌟 3. Buscamos el pedido SOLO por su ID (sin importar de quién es todavía)
+      const pedido = await Pedido.findByPk(pedidoId, {
         include: [{ model: Menu, as: 'menu' }],
         transaction: transaccion
       });
 
-      if (!pedido) throw new Error('Pedido no encontrado o no tienes permiso.');
+      if (!pedido) throw new Error('Pedido no encontrado en el sistema.');
       
-      // 2. Validamos que no esté entregado ni cancelado
+      // 🌟 4. EL PATOVICA: Validamos quién es el dueño o si es Admin
+      if (rol !== 'admin' && pedido.usuarioId !== usuarioId) {
+        throw new Error('Pedido no encontrado o no tienes permiso.');
+      }
+      
+      // Validamos que no esté entregado ni cancelado
       if (pedido.estado === 'entregado' || pedido.estado === 'cancelado') {
         throw new Error('No se puede editar un pedido que ya fue entregado o cancelado.');
       }
@@ -132,10 +152,16 @@ class PedidosService {
         cantidad: pedido.cantidad,
         turnoEntrega: pedido.turnoEntrega,
         puntoRetiro: pedido.puntoRetiro,
-        observaciones: pedido.observaciones
+        observaciones: pedido.observaciones,
+        estado: pedido.estado // Guardamos el estado anterior
       };
 
-      // 3. Si cambió la cantidad, hay que recalcular el cupo y el total
+      // 🌟 5. CIRCUITO ADMIN: Si nos mandan un nuevo "estado", lo actualizamos
+      if (estado) {
+        pedido.estado = estado;
+      }
+
+      // 6. Si cambió la cantidad, hay que recalcular el cupo y el total
       if (cantidad && cantidad !== pedido.cantidad) {
         if (cantidad <= 0) throw new Error('La cantidad debe ser mayor a cero.');
         
@@ -158,20 +184,25 @@ class PedidosService {
         pedido.total = cantidad * pedido.menu.precio; // Recalculamos total
       }
 
-      // 4. Actualizamos el resto de los campos si los enviaron
+      // 7. Actualizamos el resto de los campos si los enviaron
       if (turnoEntrega) pedido.turnoEntrega = turnoEntrega;
       if (puntoRetiro) pedido.puntoRetiro = puntoRetiro;
       if (observaciones !== undefined) pedido.observaciones = observaciones;
 
       await pedido.save({ transaction: transaccion });
 
-      // 5. Guardamos en el historial
+      // 8. Guardamos en el historial
       await HistorialPedido.create({
         pedidoId: pedido.id,
-        usuarioId,
-        accion: 'edicion',
+        usuarioId, // Quien ejecutó la acción (puede ser admin o alumno)
+        accion: estado ? 'cambio_estado' : 'edicion', // Diferenciamos la acción
         valorAnterior: JSON.stringify(valorAnterior),
-        valorNuevo: JSON.stringify({ cantidad: pedido.cantidad, turnoEntrega: pedido.turnoEntrega, puntoRetiro: pedido.puntoRetiro })
+        valorNuevo: JSON.stringify({ 
+          cantidad: pedido.cantidad, 
+          turnoEntrega: pedido.turnoEntrega, 
+          puntoRetiro: pedido.puntoRetiro,
+          estado: pedido.estado 
+        })
       }, { transaction: transaccion });
 
       await transaccion.commit();
@@ -208,6 +239,20 @@ class PedidosService {
     });
 
     return pedido;
+  }
+
+  // NUEVA FUNCIÓN: Obtener menús activos para hoy
+  async obtenerMenusActivosHoy() {
+    // Usamos la fecha local para evitar problemas de zona horaria con UTC
+    const hoy = new Date().toLocaleDateString('en-CA'); // Retorna YYYY-MM-DD
+    
+    return await Menu.findAll({
+      where: {
+        activo: true,
+        fecha: hoy, 
+      },
+      attributes: ['id', 'nombre', 'precio', 'cupoDiario'], // Solo retornar campos necesarios
+    });
   }
 }
 
