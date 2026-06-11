@@ -18,11 +18,19 @@ export const crearPedido = async (req, res) => {
 
 export const listarPedidos = async (req, res) => {
     try {
-        const usuarioId = req.usuario.id;
-        const filtros = req.query; // Capturamos los filtros de la URL (ej: ?estado=pendiente)
-        const pedidos = await pedidosService.obtenerPedidosUsuario(usuarioId, filtros);
+        const filtros = req.query; 
+        
+        // 1. Nos fijamos si el usuario que hace la petición es administrador
+        const esAdmin = req.usuario.rol === 'admin' || req.usuario.role === 'admin';
+        
+        // 2. LA LLAVE: Si es admin, pasamos 'null' (para que traiga todo). 
+        // Si es alumno común, pasamos su ID real para aislar sus datos.
+        const idParaFiltrar = esAdmin ? null : req.usuario.id;
+
+        // Le mandamos esta variable condicional a nuestro servicio
+        const pedidos = await pedidosService.obtenerPedidosUsuario(idParaFiltrar, filtros);
         return res.status(200).json(pedidos);
-    } catch(error){
+    } catch(error) {
         return res.status(500).json({ error: error.message });
     }
 }

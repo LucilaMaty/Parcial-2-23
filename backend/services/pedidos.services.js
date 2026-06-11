@@ -82,6 +82,10 @@ class PedidosService {
        // Usamos la función separada para mantener este archivo limpio
        const { wherePedido, whereMenu } = construirFiltros(usuarioId, filtros);
 
+       if (usuarioId === null) {
+          delete wherePedido.usuarioId;
+        }  
+
        return await Pedido.findAll({
            where: wherePedido,
            include: [{ 
