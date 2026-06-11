@@ -1,5 +1,5 @@
 // src/services/pedidos.service.js
-import { Pedido, Menu, HistorialPedido, sequelize } from '../src/models/index.js';
+import { Pedido, Menu, Usuario, HistorialPedido, sequelize } from '../src/models/index.js';
 import { Op } from 'sequelize';
 
 // 1. Importamos la utilidad de los filtros
@@ -79,30 +79,47 @@ class PedidosService {
 
 // PUNTO 3: Listar pedidos con filtros combinables (ahora usa la utilidad)
   async obtenerPedidosUsuario(usuarioId, filtros = {}) {
-       // Usamos la función separada para mantener este archivo limpio
-       const { wherePedido, whereMenu } = construirFiltros(usuarioId, filtros);
+       const wherePedido = {};
 
-       if (usuarioId === null) {
-          delete wherePedido.usuarioId;
-        }  
+       // 1. Filtro de seguridad por usuario (si no es admin)
+       if (usuarioId !== null) {
+          wherePedido.usuarioId = usuarioId;
+       }
+
+       // 2. Aplicamos filtros opcionales del query string
+       if (filtros.fecha) wherePedido.fecha = filtros.fecha;
+       if (filtros.estado) wherePedido.estado = filtros.estado;
+       if (filtros.menu) wherePedido.menuId = filtros.menu; // Mapeamos 'menu' (ID) a la columna 'menuId'
 
        return await Pedido.findAll({
            where: wherePedido,
-           include: [{ 
-             model: Menu, 
-             as: 'menu',
-             where: Object.keys(whereMenu).length > 0 ? whereMenu : undefined
-           }] 
+           include: [
+             { model: Menu, as: 'menu' },
+             { model: Usuario, as: 'usuario', attributes: ['nombre', 'email'] }
+           ],
+           order: [['createdAt', 'DESC']] // Ordenamos por fecha de creación (más nuevos primero)
        });
   }
 
   // 🌟 NUEVA FUNCIÓN: Buscar un pedido individual (Punto 3 del parcial)
   async obtenerPedidoPorId(id) {
       return await Pedido.findByPk(id, {
-          include: [{ 
-              model: Menu, 
-              as: 'menu' 
-          }]
+          include: [
+            { 
+                model: Menu, 
+                as: 'menu' 
+            },
+            {
+                model: Usuario,
+                as: 'usuario',
+                attributes: ['id', 'nombre', 'email']
+            },
+            {
+                model: HistorialPedido,
+                as: 'historiales',
+                include: [{ model: Usuario, as: 'usuario', attributes: ['nombre'] }]
+            }
+          ]
       });
   }
 
@@ -253,6 +270,24 @@ class PedidosService {
       },
       attributes: ['id', 'nombre', 'precio', 'cupoDiario'], // Solo retornar campos necesarios
     });
+  }
+
+  // 📊 NUEVA FUNCIÓN: Generar datos para el panel resumen
+  async obtenerEstadisticas() {
+    const pedidos = await Pedido.findAll();
+    
+    return {
+      totalPedidos: pedidos.length,
+      porEstado: {
+        pendiente: pedidos.filter(p => p.estado === 'pendiente').length,
+        confirmado: pedidos.filter(p => p.estado === 'confirmado').length,
+        entregado: pedidos.filter(p => p.estado === 'entregado').length,
+        cancelado: pedidos.filter(p => p.estado === 'cancelado').length,
+      },
+      recaudacionTotal: pedidos
+        .filter(p => p.estado !== 'cancelado')
+        .reduce((sum, p) => sum + p.total, 0)
+    };
   }
 }
 

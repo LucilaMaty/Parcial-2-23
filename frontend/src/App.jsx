@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import MisPedidos from './pages/MisPedidos';
 import AdminPanel from './pages/AdminPanel'; // 1. IMPORTAMOS LA PANTALLA REAL DEL ADMIN
 import FormularioPedido from './pages/FormularioPedido';
+import DetallePedido from './pages/DetallePedido';
 
 // Último componente temporal que nos queda (el inicio)
 const VistaInicio = () => <h2>🏠 Pantalla de Bienvenida (Pública)</h2>;
@@ -79,6 +80,15 @@ function App() {
             element={
               <ProtectedRoute rolRequerido="admin">
                 <AdminPanel />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/detalle-pedido/:id" 
+            element={
+              <ProtectedRoute rolRequerido={usuario?.rol}> 
+                <DetallePedido />
               </ProtectedRoute>
             } 
           />

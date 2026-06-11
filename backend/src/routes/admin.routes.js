@@ -1,6 +1,7 @@
 // src/routes/admin.routes.js
 import { Router } from 'express';
 import { actualizarEstadoPedido } from '../controllers/admin.controller.js';
+import { obtenerResumenAdmin } from '../controllers/pedido.controller.js';
 import { verificarToken, esAdmin } from '../middlewares/auth.middlewares.js';
 
 const router = Router();
@@ -11,5 +12,8 @@ router.use(esAdmin);
 
 // Endpoint: PATCH /api/admin/pedidos/:id/estado
 router.patch('/pedidos/:id/estado', actualizarEstadoPedido);
+
+// Endpoint: GET /api/admin/resumen
+router.get('/resumen', obtenerResumenAdmin);
 
 export default router;

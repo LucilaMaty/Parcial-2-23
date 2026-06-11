@@ -91,3 +91,13 @@ export const cancelarPedido = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
+
+// 📊 Nuevo: Obtener resumen para el dashboard admin
+export const obtenerResumenAdmin = async (req, res) => {
+  try {
+    const estadisticas = await pedidosService.obtenerEstadisticas();
+    return res.status(200).json(estadisticas);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

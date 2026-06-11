@@ -73,6 +73,16 @@ const pedidosService = {
       console.error(`Error al cambiar estado del pedido ${id}:`, error);
       throw new Error(error.response?.data?.error || `Error al cambiar estado del pedido ${id}`, { cause: error });
     }
+  },
+
+  async obtenerResumenAdmin() {
+    try {
+      const response = await api.get('/admin/resumen');
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener el resumen del admin:', error);
+      throw new Error(error.response?.data?.error || 'No se pudo cargar el resumen estadístico.', { cause: error });
+    }
   }
 };
 
