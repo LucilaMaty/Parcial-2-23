@@ -12,7 +12,11 @@ import { verificarToken } from '../middlewares/auth.middlewares.js';
 
 const router = express.Router();
 
-// Aplicamos el middleware verificarToken a todas las rutas de este archivo
+// GET /api/pedidos/menus-disponibles -> Obtener menús para el alta
+// Esta ruta la dejamos pública para que la UI pueda cargar los menús sin autenticación
+router.get('/menus-disponibles', listarMenusDisponibles);
+
+// Aplicamos el middleware verificarToken a partir de aquí: las demás rutas requieren login
 router.use(verificarToken);
 
 // POST /api/pedidos -> Crear un pedido
@@ -20,9 +24,6 @@ router.post('/', crearPedido);
 
 // GET /api/pedidos -> Listar los pedidos del usuario autenticado
 router.get('/', listarPedidos);
-
-// GET /api/pedidos/menus-disponibles -> Obtener menús para el alta (DEBE IR ANTES DE :id)
-router.get('/menus-disponibles', listarMenusDisponibles);
 
 // PUT /api/pedidos/:id -> Editar pedido
 router.put('/:id', editarPedido);

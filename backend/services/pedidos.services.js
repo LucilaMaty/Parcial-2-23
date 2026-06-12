@@ -261,12 +261,12 @@ class PedidosService {
   // NUEVA FUNCIÓN: Obtener menús activos para hoy
   async obtenerMenusActivosHoy() {
     // Usamos la fecha local para evitar problemas de zona horaria con UTC
-    const hoy = new Date().toLocaleDateString('en-CA'); // Retorna YYYY-MM-DD
+    const hoy = new Date().toISOString().split('T')[0]; // Retorna YYYY-MM-DD en UTC (coincide con la seed)
     
     return await Menu.findAll({
       where: {
         activo: true,
-        fecha: hoy, 
+        fecha: hoy,
       },
       attributes: ['id', 'nombre', 'precio', 'cupoDiario'], // Solo retornar campos necesarios
     });
